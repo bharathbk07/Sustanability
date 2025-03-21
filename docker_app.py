@@ -2,12 +2,24 @@ import subprocess
 import platform
 import time
 import random
+from prometheus_client import start_http_server, Gauge, REGISTRY
 
 # Constants for energy and carbon calculations
 CPU_WATTS_PER_CORE = 2.5  # Approximate power consumption per CPU core in Watts
 JOULES_PER_WATT_SECOND = 1  # 1 Watt = 1 Joule per second
 CARBON_INTENSITY_GRID = 0.4  # kg CO₂ per kWh (approximate global grid average)
 CONTAINER_ENERGY_FACTOR = 0.8  # Efficiency factor for containers vs. traditional workloads
+
+# Prometheus metrics
+cpu_usage_metric = Gauge('docker_cpu_usage', 'CPU usage percentage')
+memory_usage_metric = Gauge('docker_memory_usage', 'Memory usage percentage')
+power_usage_metric = Gauge('docker_power_usage_watts', 'Estimated power consumption in Watts')
+energy_efficiency_metric = Gauge('docker_energy_efficiency', 'Joules per request/task')
+carbon_footprint_metric = Gauge('docker_carbon_footprint', 'CO2 emissions per container in gCO2eq')
+cloud_carbon_metric = Gauge('docker_cloud_carbon_footprint', 'Estimated cloud CO2 emissions in gCO2eq')
+k8s_pods_metric = Gauge('k8s_total_pods', 'Total Kubernetes pods')
+k8s_nodes_metric = Gauge('k8s_total_nodes', 'Total Kubernetes nodes')
+k8s_utilization_metric = Gauge('k8s_node_utilization', 'Pods per node utilization efficiency')
 
 def is_docker_running():
     """Check if Docker is running by executing 'docker info'."""
@@ -145,27 +157,35 @@ def cloud_carbon_footprint(active_power):
     return cloud_co2_emissions
 
 if __name__ == "__main__":
+    # Start Prometheus HTTP server on port 9271
+    start_http_server(9271)
+    print("🚀 Prometheus metrics available at http://localhost:9271")
     try:
         while True:
-            print("\n🔄 Checking Docker sustainability metrics...\n")
             if is_docker_running():
                 pid = get_docker_pid()
                 if pid:
                     cpu_usage, memory_usage = get_process_resource_usage(pid)
                     if cpu_usage is not None:
-                        active_power, idle_power = estimate_power_consumption(cpu_usage)
-                        estimate_energy_efficiency(active_power)
-                        estimate_carbon_footprint(active_power)
-                        cloud_carbon_footprint(active_power)
-                    
-                    # Kubernetes Metrics
-                    total_pods, total_nodes, node_utilization = get_kubernetes_metrics()
-                    if total_pods > 0:
-                        print(f"🤖 Kubernetes Pods: {total_pods}")
-                        print(f"🔗 Kubernetes Nodes: {total_nodes}")
-                        print(f"📊 Node Utilization Efficiency: {node_utilization:.2f} Pods/Node")
+                        active_power, _ = estimate_power_consumption(cpu_usage)
+                        energy_efficiency = estimate_energy_efficiency(active_power)
+                        carbon_footprint = estimate_carbon_footprint(active_power)
+                        cloud_co2 = cloud_carbon_footprint(active_power)
 
-            print("\n⏳ Refreshing in 2 seconds...\n")
-            time.sleep(2)
+                        # Update Prometheus metrics
+                        cpu_usage_metric.set(cpu_usage)
+                        memory_usage_metric.set(memory_usage)
+                        power_usage_metric.set(active_power)
+                        energy_efficiency_metric.set(energy_efficiency)
+                        carbon_footprint_metric.set(carbon_footprint)
+                        cloud_carbon_metric.set(cloud_co2)
+
+                # Kubernetes Metrics
+                total_pods, total_nodes, node_utilization = get_kubernetes_metrics()
+                k8s_pods_metric.set(total_pods)
+                k8s_nodes_metric.set(total_nodes)
+                k8s_utilization_metric.set(node_utilization)
+            
+            time.sleep(5)
     except KeyboardInterrupt:
         print("\n🛑 Monitoring stopped.")
