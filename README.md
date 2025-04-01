@@ -11,6 +11,41 @@ This application monitors system sustainability metrics, including CPU, GPU, and
 - **Prometheus Integration**: Exposes metrics for real-time monitoring.
 - **CSV Logging**: Optionally logs metrics to a CSV file.
 
+## Python Libraries and Their Responsibilities
+
+The following Python libraries are used in the application to collect and process sustainability metrics:
+
+- **`psutil`**:  
+   Responsible for collecting system-level metrics such as:
+   - CPU usage and count
+   - RAM usage and total size
+
+- **`pynvml`** (Optional):  
+   Used for NVIDIA GPU monitoring, including:
+   - GPU power usage
+   - GPU count and model details
+
+- **`requests`**:  
+   Handles API calls for:
+   - Fetching location data (latitude, longitude, country, region)
+   - Detecting cloud provider and region
+
+- **`prometheus_client`**:  
+   Exposes metrics to Prometheus for real-time monitoring, including:
+   - Numeric metrics (e.g., power usage, energy consumption)
+   - Metadata labels (e.g., project name, system details)
+
+- **`platform`**:  
+   Provides system information such as:
+   - OS details
+   - CPU and GPU model names
+
+- **`subprocess`**:  
+   Executes system commands to retrieve:
+   - CPU name
+   - GPU details (on macOS and Linux)
+   - RAM manufacturer name (on Windows and Linux)
+
 ## Requirements
 
 - Python 3.6 or higher
